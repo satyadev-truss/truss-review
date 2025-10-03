@@ -17,6 +17,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@probot/adapter-aws-lambda-serverless": "^4.0.3",
     "openai": "^6.1.0",
     "probot": "^13.4.5"
   },
