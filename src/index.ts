@@ -7,8 +7,13 @@ const openaiService = new OpenAIService(process.env.OPENAI_API_KEY!);
 const processedPRs = new Set<string>();
 
 export default (app: Probot) => {
-  app.on("pull_request.opened", async (context) => {
+  app.on("pull_request.labeled", async (context) => {
     const pr = context.payload.pull_request;
+    const label = context.payload.label;
+
+    if (label.name !== "truss-review") {
+      return;
+    }
 
     const prId = `${context.repo().owner}/${context.repo().repo}#${pr.number}`;
 
