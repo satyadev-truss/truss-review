@@ -11,7 +11,8 @@ export class OpenAIService {
   async generateRoast(
     stats: { additions: number; deletions: number; changedFiles: number },
     diff: any,
-    authorContext?: string
+    authorContext?: string,
+    styleGuideContext?: string
   ): Promise<string> {
     const completion = await this.client.chat.completions.create({
       model: "gpt-4o-mini",
@@ -22,7 +23,7 @@ export class OpenAIService {
         },
         {
           role: "user",
-          content: createUserPrompt(stats, diff, authorContext),
+          content: createUserPrompt(stats, diff, authorContext, styleGuideContext),
         },
       ],
       temperature: 0.8,

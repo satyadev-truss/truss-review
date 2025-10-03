@@ -2,6 +2,7 @@ import { Probot } from "probot";
 import { OpenAIService } from "./services/openai.js";
 import { createSuccessComment, createFallbackComment } from "./prompts.js";
 import { getUserContext } from "./user-profiles.js";
+import { getStyleGuideForPrompt } from "./style-guide.js";
 
 const openaiService = new OpenAIService(process.env.OPENAI_API_KEY!);
 const processedPRs = new Set<string>();
@@ -44,8 +45,11 @@ export default (app: Probot) => {
       // Get author context for personalized roasting
       const authorContext = getUserContext(pr.user.login);
 
+      // Get style guide context
+      const styleGuideContext = getStyleGuideForPrompt();
+
       // Generate roast using OpenAI service
-      const roast = await openaiService.generateRoast(stats, diff.data, authorContext || undefined);
+      const roast = await openaiService.generateRoast(stats, diff.data, authorContext || undefined, styleGuideContext);
 
       // Post success comment
       await context.octokit.issues.createComment(
