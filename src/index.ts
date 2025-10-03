@@ -1,23 +1,24 @@
 import { Probot } from "probot";
-import OpenAI from "openai";
+import { OpenAIService } from "./services/openai.js";
+import { createSuccessComment, createFallbackComment } from "./prompts.js";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openaiService = new OpenAIService(process.env.OPENAI_API_KEY!);
+const processedPRs = new Set<string>();
 
 export default (app: Probot) => {
-  app.on(["pull_request.opened", "pull_request.synchronize"], async (context) => {
+  app.on("pull_request.opened", async (context) => {
     const pr = context.payload.pull_request;
-
-    // Post initial comment
-    await context.octokit.issues.createComment(
-      context.issue({
-        body: `👋 Thanks for opening this PR, @${pr.user.login}! Reviewing your code... 🔥`,
-      })
-    );
-
+    
+    const prId = `${context.repo().owner}/${context.repo().repo}#${pr.number}`;
+    
+    if (processedPRs.has(prId)) {
+      return;
+    }
+    
+    processedPRs.add(prId);
+    
     try {
-      // Fetch the PR diff
+      // Get PR diff
       const diff = await context.octokit.pulls.get({
         owner: context.payload.repository.owner.login,
         repo: context.payload.repository.name,
@@ -28,55 +29,39 @@ export default (app: Probot) => {
       });
 
       // Get PR stats
-      const additions = pr.additions;
-      const deletions = pr.deletions;
-      const changedFiles = pr.changed_files;
+      const stats = {
+        additions: pr.additions,
+        deletions: pr.deletions,
+        changedFiles: pr.changed_files,
+      };
 
-      // Send to GPT for roasting
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are a brutally honest code reviewer who roasts code in a funny way.
-Be sarcastic, witty, and savage but keep it lighthearted and fun.
-Point out actual code issues but make it entertaining.
-Keep your response under 500 words.`,
-          },
-          {
-            role: "user",
-            content: `Review this PR and roast it:
+      // Generate roast using OpenAI service
+      const roast = await openaiService.generateRoast(stats, diff.data);
 
-**Stats:**
-- ${changedFiles} files changed
-- ${additions} additions
-- ${deletions} deletions
-
-**Diff:**
-\`\`\`diff
-${diff.data}
-\`\`\``,
-          },
-        ],
-        temperature: 0.8,
-        max_tokens: 800,
-      });
-
-      const roast = completion.choices[0].message.content;
-
-      // Post the roast
+      // Post success comment
       await context.octokit.issues.createComment(
         context.issue({
-          body: `## 🔥 Code Roast\n\n${roast}\n\n---\n*Roasted by GPT-4*`,
+          body: createSuccessComment(pr.user.login, roast),
         })
       );
+      
+      processedPRs.delete(prId);
+      
     } catch (error) {
       console.error("Error generating roast:", error);
-      await context.octokit.issues.createComment(
-        context.issue({
-          body: `❌ Failed to roast your code. Even the AI couldn't handle this mess. 💀`,
-        })
-      );
+      processedPRs.delete(prId);
+      
+      try {
+        await context.octokit.issues.createComment(
+          context.issue({
+            body: createFallbackComment(pr.user.login),
+          })
+        );
+        processedPRs.delete(prId);
+      } catch (commentError) {
+        console.error("Failed to post fallback comment:", commentError);
+        processedPRs.delete(prId);
+      }
     }
   });
 };
