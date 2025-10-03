@@ -5,19 +5,27 @@ Keep your response under 100 words.`;
 
 export const createUserPrompt = (
   stats: { changedFiles: number; additions: number; deletions: number },
-  diff: string
+  diff: string,
+  authorContext?: string
 ): string => {
-  return `Review this PR and roast it:
+  let prompt = `Review this PR and roast it:
 
 **Stats:**
 - ${stats.changedFiles} files changed
 - ${stats.additions} additions
 - ${stats.deletions} deletions
+`;
 
-**Diff:**
+  if (authorContext) {
+    prompt += `\n**Author Info:**\n${authorContext}\n`;
+  }
+
+  prompt += `\n**Diff:**
 \`\`\`diff
 ${diff}
 \`\`\``;
+
+  return prompt;
 };
 
 export const createSuccessComment = (
