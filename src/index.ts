@@ -1,33 +1,67 @@
 import { Probot } from "probot";
+import { OpenAIService } from "./services/openai.js";
+import { createSuccessComment, createFallbackComment } from "./prompts.js";
+
+const openaiService = new OpenAIService(process.env.OPENAI_API_KEY!);
+const processedPRs = new Set<string>();
 
 export default (app: Probot) => {
-  app.on(["pull_request.opened"], async (context) => {
+  app.on("pull_request.opened", async (context) => {
     const pr = context.payload.pull_request;
     
-    // Get the file diffs
-    const { data: files } = await context.octokit.pulls.listFiles({
-      owner: context.repo().owner,
-      repo: context.repo().repo,
-      pull_number: pr.number,
-    });
+    const prId = `${context.repo().owner}/${context.repo().repo}#${pr.number}`;
     
-    console.log("=== FILE DIFFS ===");
-    files.forEach((file: any) => {
-      console.log(`\n📁 File: ${file.filename}`);
-      console.log(`Status: ${file.status}`);
-      console.log(`Additions: +${file.additions}`);
-      console.log(`Deletions: -${file.deletions}`);
-      console.log(`Changes: ${file.changes}`);
-      if (file.patch) {
-        console.log("Diff:");
-        console.log(file.patch);
+    if (processedPRs.has(prId)) {
+      return;
+    }
+    
+    processedPRs.add(prId);
+    
+    try {
+      // Get PR diff
+      const diff = await context.octokit.pulls.get({
+        owner: context.payload.repository.owner.login,
+        repo: context.payload.repository.name,
+        pull_number: pr.number,
+        mediaType: {
+          format: "diff",
+        },
+      });
+
+      // Get PR stats
+      const stats = {
+        additions: pr.additions,
+        deletions: pr.deletions,
+        changedFiles: pr.changed_files,
+      };
+
+      // Generate roast using OpenAI service
+      const roast = await openaiService.generateRoast(stats, diff.data);
+
+      // Post success comment
+      await context.octokit.issues.createComment(
+        context.issue({
+          body: createSuccessComment(pr.user.login, roast),
+        })
+      );
+      
+      processedPRs.delete(prId);
+      
+    } catch (error) {
+      console.error("Error generating roast:", error);
+      processedPRs.delete(prId);
+      
+      try {
+        await context.octokit.issues.createComment(
+          context.issue({
+            body: createFallbackComment(pr.user.login),
+          })
+        );
+        processedPRs.delete(prId);
+      } catch (commentError) {
+        console.error("Failed to post fallback comment:", commentError);
+        processedPRs.delete(prId);
       }
-      console.log("---");
-    });
-    
-    const issueComment = context.issue({
-      body: `👋 Thanks for opening this PR, @${pr.user.login}! The AI review bot is active.`,
-    });
-    await context.octokit.issues.createComment(issueComment);
+    }
   });
 };
