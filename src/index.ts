@@ -1,10 +1,12 @@
 import { Probot } from "probot";
 import { OpenAIService } from "./services/openai.js";
+import { GiphyService } from "./services/giphy.js";
 import { createSuccessComment, createFallbackComment } from "./prompts.js";
 import { getUserContext } from "./user-profiles.js";
 import { getStyleGuideForPrompt } from "./style-guide.js";
 
 const openaiService = new OpenAIService(process.env.OPENAI_API_KEY!);
+const giphyService = new GiphyService(process.env.GIPHY_API_KEY!);
 const processedPRs = new Set<string>();
 
 export default (app: Probot) => {
@@ -51,10 +53,24 @@ export default (app: Probot) => {
       // Generate roast using OpenAI service
       const roast = await openaiService.generateRoast(stats, diff.data, authorContext || undefined, styleGuideContext);
 
+      // Generate GIF search term from the roast
+      const gifSearchTerm = await openaiService.generateGifSearchTerm(roast);
+      console.log(`Generated GIF search term: ${gifSearchTerm}`);
+
+      // Search for GIF
+      const gifUrl = await giphyService.searchGif(gifSearchTerm);
+
+      // Build comment with optional GIF
+      let commentBody = createSuccessComment(pr.user.login, roast);
+      if (gifUrl) {
+        const hashtag = gifSearchTerm.replace(/\s+/g, '').toLowerCase();
+        commentBody += `\n\n#${hashtag}\n![${gifSearchTerm}](${gifUrl})`;
+      }
+
       // Post success comment
       await context.octokit.issues.createComment(
         context.issue({
-          body: createSuccessComment(pr.user.login, roast),
+          body: commentBody,
         })
       );
 

@@ -17,10 +17,12 @@
     "test": "vitest"
   },
   "dependencies": {
+    "giphy-api": "^2.0.2",
     "openai": "^6.1.0",
     "probot": "^13.4.5"
   },
   "devDependencies": {
+    "@types/giphy-api": "^2.0.6",
     "@types/node": "^20.0.0",
     "nock": "^14.0.5",
     "smee-client": "^2.0.0",

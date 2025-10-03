@@ -14,11 +14,12 @@ export const userProfiles: Record<string, string> = {
   `,
   "ydev-truss": `
   Yev Deviatov. Senior Engineer. Lives in Maryland. Did GIS from University of Maryland.
-  Plays World of Warcraft. React and TypeScript expert. Built out workpapers feature.
+  Plays World of Warcraft. React and TypeScript expert. Built out workpapers feature, our SSO/SAML feature,
   `,
   "ChrisChenCSQ": `
-  Songqi Chen. Software Engineer. Lives in Atlanta. Has a cat. Drives a Tesla. Did CS Undergrad & Masters
-  from Emory University. One of the core engineers of Truss.
+  Songqi Chen. Software Engineer. Lives in Atlanta. Has a cat. Drives a Tesla. Plays League of Legends. 
+  Did CS Undergrad & Masters from Emory University. One of the core engineers of Truss. Responsible for 
+  our Electron desktop, our Tax Prep integrations with SAM and Filed.
   `,
   "mohammad-truss": `
   Mohammad Arjamand Ali. Software Engineer. Lives in Ypsilanti, MI. Did CS from Eastern Michigan University.
@@ -33,12 +34,6 @@ export const userProfiles: Record<string, string> = {
   Has a dog. Built Truss Assistant, our AI Chatbot. Used to work as a bartender. Also worked
   in sales at Nissan.
   `,
-
-
-
-  // Add more users:
-  // "srmoola": "Your roast context here",
-  // "teammate2": "Their roast context here",
 };
 
 /**
