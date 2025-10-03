@@ -37,4 +37,44 @@ export class OpenAIService {
 
     return roast;
   }
+
+  async generateGifSearchTerm(roast: string): Promise<string> {
+    const completion = await this.client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a meme expert that generates relatable GIF search terms. Your goal is to find a GIF that matches the specific content or theme of the roast, not just a generic reaction.
+
+Rules:
+- If the roast mentions a specific thing (apple, cat, coffee, etc), use that thing
+- If it references a feeling or situation, be specific (tired coding, confused developer, debugging nightmare)
+- Avoid overly generic terms (facepalm, wow, oh no) unless nothing else fits
+- Be creative and relatable to developers
+- Keep it 1-3 words max
+- Make it visual and memeable
+
+Examples:
+- Roast mentions bugs → "bugs everywhere" or "debugging"
+- Roast mentions coffee → "coffee coding"
+- Roast mentions copy-paste → "copy paste"
+- Roast mentions Apple → "apple"
+- Roast is generic sarcasm → "sarcastic laugh"`,
+        },
+        {
+          role: "user",
+          content: `Based on this code review roast, generate a specific, relatable GIF search term (1-3 words) that matches the content:\n\n${roast}`,
+        },
+      ],
+      temperature: 0.8,
+      max_tokens: 15,
+    });
+
+    const searchTerm = completion.choices[0].message.content?.trim();
+    if (!searchTerm) {
+      return "coding fail"; // fallback
+    }
+
+    return searchTerm;
+  }
 }
